@@ -68,6 +68,7 @@ for atlas = 1:num_atlases
     labeled_intensities(ori_exist,atlas) = to_look(:,atlas);
 end
 
+labeled_coordinates = [header; [num2cell(coordinates), labeled_coordinates]];
 % Locate the installation directory and check if database exists
 % [path_to_database, ~] = fileparts(which('label_brain'));
 % if isempty(path_to_database)
