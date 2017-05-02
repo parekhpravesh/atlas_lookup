@@ -11,10 +11,15 @@ if num_inputs == 0
     error('At least one input is necessary');
 else
     [~, ~, ext] = fileparts(input_string);
-    if strcmp(ext, '.txt') && ~exist('threshold', 'var')
+    if strcmp(ext, '.nii') && ~exist('threshold', 'var')
         threshold = 0;
     end
 end
+
+% Load database
+path_to_database = uigetdir(pwd, 'Select directory having database');
+load(fullfile(path_to_database, 'database.mat'));
+num_atlases = abs(size(database_intensity,2)-3);
 
 % If input is a nifti file, read the file in and threshold
 if strcmp(ext, '.nii') || strcmp(ext, '.img') || strcmp(ext, '.hdr')
@@ -22,9 +27,16 @@ if strcmp(ext, '.nii') || strcmp(ext, '.img') || strcmp(ext, '.hdr')
     if length(image_vol) > 1
         error('Only 3D volumes allowed');
     end
-    image_data = spm_read_vols(image_vol);
-    if isempty(nonzeros(image_data>threshold)) ~=0
+    [image_data, image_xyz] = spm_read_vols(image_vol);
+    image_xyz = image_xyz';
+    if ~isempty(nonzeros(image_data>threshold)) 
         image_data_thr = (image_data>threshold).*image_data;
+        num_voxels_thr = nonzeros(image_data_thr);
+        coordinates = image_xyz(image_data>threshold,:);
+        
+        % If 3D volume is proper, initialize labeling variables
+        labeled_coordinates = cell(size(num_voxels_thr, 1), num_atlases);
+        labeled_intensities = NaN(size(num_voxels_thr, 1), num_atlases);
     else
         error('No voxels cross the threhold');
     end
@@ -37,24 +49,15 @@ else
     else
         if size(coordinates,2) ~=3
             error('File has improper formatting');
+        else
+            % If text file is proper, initialize labeling variables
+            labeled_coordinates = cell(size(coordinates,1), num_atlases);
+            labeled_intensities = NaN(size(coordinates,1), num_atlases);
         end
     end
 end
 
-% Locate the installation directory and check if database exists
-% [path_to_database, ~] = fileparts(which('label_brain'));
-% 
-% if isempty(path_to_database)
-%     warn('Installation lcoation not found; please manually locate database');
-    path_to_database = uigetdir(pwd, 'Select directory having database');
-% end
-
-% Load the coordinates text file and lookup from the database
-load(fullfile(path_to_database, 'database.mat'));
-num_atlases = abs(size(database_intensity,2)-3);
-labeled_coordinates = cell(size(coordinates,1), num_atlases);
-labeled_intensities = NaN(size(coordinates,1), num_atlases);
-
+% Actual labeling operation
 [ori_exist, loc] = (ismember(coordinates, database_intensity(:,1:3), 'rows'));
 labeled_coordinates(loc==0,:) = {'Not found'};
 
@@ -64,3 +67,9 @@ for atlas = 1:num_atlases
     labeled_coordinates(ori_exist,atlas) = database_labels{atlas}(tmp_loc,2);
     labeled_intensities(ori_exist,atlas) = to_look(:,atlas);
 end
+
+% Locate the installation directory and check if database exists
+% [path_to_database, ~] = fileparts(which('label_brain'));
+% if isempty(path_to_database)
+%     warn('Installation lcoation not found; please manually locate database');
+% end
