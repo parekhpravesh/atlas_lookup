@@ -1,11 +1,10 @@
+function create_database
 % Create database from a list of atlases and lookup tables supplied by the
 % user
 % Parekh, Pravesh
 % MBIAL
 % May 02, 2017
 % Carried over from April 17, 2017
-
-clear
 
 % Get directories from user
 atlas_files_path = uigetdir(pwd, 'Select atlas directory');
@@ -88,7 +87,7 @@ for atlas = 1:num_atlases
         uq_count = uq_count + 1;
     end
     fclose(fid);
-    clear all_labels label loc atlas_vol atlas_xyz fid list_unique_intensities uq uq_count
+    clear all_labels label loc atlas_vol atlas_xyz fid list_unique_intensities uq uq_count atlas_ijk
 end
 
 clear vox_check dim_check atlas count num_voxels
@@ -103,5 +102,8 @@ header = [{'x'}, {'y'}, {'z'}, all_atlas_names];
 
 % Save variables 
 cd(output_dir);
-save('database_all_vars.mat');
+save('database_all_vars.mat', 'all_atlas_names', 'all_atlas_paths', ...
+    'all_label_paths', 'atlas_files_path', 'database_intensity', ...
+    'database_labels', 'header', 'label_files_path', 'list_atlases', ...
+    'num_atlases', 'output_dir');
 save('database.mat', 'database_intensity', 'database_labels', 'header');
