@@ -1,4 +1,4 @@
-function labeled_coordinates = label_brain(input_string, threshold)
+function labeled_coordinates = label_brain(db_location, input_string, threshold)
 % Labeling the brain using multiple atlases
 % Parekh, Pravesh
 % MBIAL
@@ -17,8 +17,7 @@ else
 end
 
 % Load database
-path_to_database = uigetdir(pwd, 'Select directory having database');
-load(fullfile(path_to_database, 'database.mat'));
+load(db_location);
 num_atlases = abs(size(database_intensity,2)-3);
 
 % If input is a nifti file, read the file in and threshold
@@ -69,8 +68,3 @@ for atlas = 1:num_atlases
 end
 
 labeled_coordinates = [header; [num2cell(coordinates), labeled_coordinates]];
-% Locate the installation directory and check if database exists
-% [path_to_database, ~] = fileparts(which('label_brain'));
-% if isempty(path_to_database)
-%     warn('Installation lcoation not found; please manually locate database');
-% end
