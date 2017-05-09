@@ -145,10 +145,10 @@ handles_create_db .tag_db_okay.Enable = 'on';
 % -------------------------------------------------------------------------
 function label_call(~, ~)
 global db_location file_select_box input_file_location save_location ...
-    button_label_enable
+    button_label_enable threshold
 input_file_location = '';
 save_location = '';
-
+threshold = 0;
 % Locate database file
 install_dir = fileparts(which('label_brain'));
 if ~exist(fullfile(install_dir, 'database', 'database.mat'), 'file')
@@ -200,7 +200,7 @@ uicontrol(file_select_box, 'units', 'normalized', 'style', 'text', ...
     'FontSize', 10);
 
 uicontrol(file_select_box, 'units', 'normalized', 'style', 'edit', ...
-    'position', [0.23 0.04 0.15 0.15], 'String', '0', ...
+    'position', [0.23 0.04 0.15 0.15], 'String', num2str(threshold), ...
     'callback', @get_threshold);
 
 uicontrol(file_select_box, 'units', 'normalized', 'style', 'pushbutton', ...
