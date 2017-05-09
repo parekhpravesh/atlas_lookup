@@ -16,6 +16,9 @@ else
     end
 end
 
+% Flag for cases when nothing passes the threhsold
+flag = 0;
+
 % Load database
 load(db_location);
 num_atlases = abs(size(database_intensity,2)-3);
@@ -28,7 +31,7 @@ if strcmp(ext, '.nii') || strcmp(ext, '.img') || strcmp(ext, '.hdr')
     end
     [image_data, image_xyz] = spm_read_vols(image_vol);
     image_xyz = image_xyz';
-    if ~isempty(nonzeros(image_data>threshold)) 
+    if ~isempty(nonzeros(image_data>threshold))
         image_data_thr = (image_data>threshold).*image_data;
         num_voxels_thr = nonzeros(image_data_thr);
         coordinates = image_xyz(image_data>threshold,:);
@@ -37,7 +40,8 @@ if strcmp(ext, '.nii') || strcmp(ext, '.img') || strcmp(ext, '.hdr')
         labeled_coordinates = cell(size(num_voxels_thr, 1), num_atlases);
         labeled_intensities = NaN(size(num_voxels_thr, 1), num_atlases);
     else
-        error('No voxels cross the threhold');
+        disp('No voxels cross the threhold');
+        flag = 1;
     end
 else
     % If input is a text file, ensure that the file is readable and organized
@@ -57,14 +61,18 @@ else
 end
 
 % Actual labeling operation
-[ori_exist, loc] = (ismember(coordinates, database_intensity(:,1:3), 'rows'));
-labeled_coordinates(loc==0,:) = {'Not found'};
-
-to_look = database_intensity(nonzeros(loc), 4:size(database_intensity,2));
-for atlas = 1:num_atlases
-    [~, tmp_loc] = ismember(to_look(:,atlas), cell2mat(database_labels{atlas}(:,1)));
-    labeled_coordinates(ori_exist,atlas) = database_labels{atlas}(tmp_loc,2);
-    labeled_intensities(ori_exist,atlas) = to_look(:,atlas);
+if flag ~= 1
+    [ori_exist, loc] = (ismember(coordinates, database_intensity(:,1:3), 'rows'));
+    labeled_coordinates(loc==0,:) = {'Not found'};
+    
+    to_look = database_intensity(nonzeros(loc), 4:size(database_intensity,2));
+    for atlas = 1:num_atlases
+        [~, tmp_loc] = ismember(to_look(:,atlas), cell2mat(database_labels{atlas}(:,1)));
+        labeled_coordinates(ori_exist,atlas) = database_labels{atlas}(tmp_loc,2);
+        labeled_intensities(ori_exist,atlas) = to_look(:,atlas);
+    end
+    
+    labeled_coordinates = [header; [num2cell(coordinates), labeled_coordinates]];
+else
+    labeled_coordinates = header;
 end
-
-labeled_coordinates = [header; [num2cell(coordinates), labeled_coordinates]];
