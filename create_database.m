@@ -1,15 +1,10 @@
-function create_database
+function create_database(atlas_files_path, label_files_path, output_dir)
 % Create database from a list of atlases and lookup tables supplied by the
 % user
 % Parekh, Pravesh
 % MBIAL
 % May 02, 2017
 % Carried over from April 17, 2017
-
-% Get directories from user
-atlas_files_path = uigetdir(pwd, 'Select atlas directory');
-label_files_path = uigetdir(pwd, 'Select label directory');
-output_dir = uigetdir(pwd, 'Select output directory');
 
 % Initialize
 cd(atlas_files_path);
