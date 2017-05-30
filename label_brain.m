@@ -1,4 +1,4 @@
-function labeled_coordinates = label_brain(db_location, input_string, threshold)
+function label_brain(db_location, input_string, save_dir, threshold)
 % Labeling the brain using multiple atlases
 % Parekh, Pravesh
 % MBIAL
@@ -76,3 +76,17 @@ if flag ~= 1
 else
     labeled_coordinates = header;
 end
+
+% Prepare to write the file
+fid = fopen(save_dir, 'w');
+[num_rows, num_text_cols] = size(labeled_coordinates);
+formatSpec = ['%2.2f\t%2.2f\t%2.2f', repmat('\t%s\t', 1, num_text_cols-3), '\r\n'];
+formatSpec_header = repmat('%s\t', 1, num_text_cols);
+
+% Write header
+fprintf(fid, formatSpec_header, labeled_coordinates{1,:});
+
+for row = 2:num_rows
+    fprintf(fid, formatSpec, labeled_coordinates{row,:});
+end
+fclose(fid);
