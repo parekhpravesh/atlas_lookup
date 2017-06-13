@@ -80,8 +80,8 @@ end
 % Prepare to write the file
 fid = fopen(save_dir, 'w');
 [num_rows, num_text_cols] = size(labeled_coordinates);
-formatSpec = ['%2.2f\t%2.2f\t%2.2f', repmat('\t%s\t', 1, num_text_cols-3), '\r\n'];
-formatSpec_header = repmat('%s\t', 1, num_text_cols);
+formatSpec = ['%2.2f\t%2.2f\t%2.2f', repmat('\t%s', 1, num_text_cols-3), '\r\n'];
+formatSpec_header = [repmat('%s\t', 1, num_text_cols), '\r\n'];
 
 % Write header
 fprintf(fid, formatSpec_header, labeled_coordinates{1,:});
