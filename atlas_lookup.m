@@ -7,10 +7,10 @@ function atlas_lookup
 % -------------------------------------------------------------------------
 % Global variables
 % -------------------------------------------------------------------------
-global help_icon parent_figure max_width max_height fig_height fig_width ...
+global wait_icon wait_trans parent_figure max_width max_height fig_height fig_width ...
     but_height but_width
 
-help_icon = imread(fullfile(matlabroot, 'help', 'warning.gif'));
+[wait_icon, ~, wait_trans] = imread(fullfile(fileparts(which('atlas_lookup')), 'icons', 'icon_wait.png'));
 
 % Set globals for drawing figures
 set(0, 'units', 'characters');
@@ -387,7 +387,7 @@ function set_db_location
 global db_location
 
 % Locate database file
-install_dir = fileparts(which('label_brain'));
+install_dir = fileparts(which('atlas_lookup'));
 if ~exist(fullfile(install_dir, 'database', 'database.mat'), 'file')
     warndlg('Database file not found; please locate manually',...
         'Database not found');
@@ -471,7 +471,7 @@ end
 % Function to create wait box
 % -------------------------------------------------------------------------
 function create_wait_box(module)
-global wait_box help_icon max_width fig_width max_height fig_height ...
+global wait_box wait_icon wait_trans max_width fig_width max_height fig_height ...
     but_height but_width
 
 switch(module)
@@ -488,13 +488,13 @@ wait_box = figure('units', 'characters', 'position', ...
     but_width but_height-but_height/3], 'Name', title, 'numbertitle', 'off', ...
     'MenuBar', 'none');
 
-ax = axes('parent', wait_box, 'units', 'normalized', 'position', ...
-    [0.02 0.4 0.20 0.5]);
-imagesc(ax, help_icon);
+ax = axes('parent', wait_box, 'units', 'pixels', 'position', ...
+    [10 20 80 80]);
+imagesc(ax, wait_icon, 'AlphaData', wait_trans);
 axis off;
 
 uicontrol(wait_box, 'units', 'normalized', 'style', 'text', ...
-    'position', [0.25 0.60 0.80 0.25], 'String', 'Please Wait!', ...
+    'position', [0.28 0.50 0.80 0.25], 'String', 'Please Wait!', ...
     'FontSize', 12, 'HorizontalAlignment', 'left', 'tag', 'tag_wait_text');
 
 uicontrol(wait_box, 'units', 'normalized', 'style', 'pushbutton', ...
