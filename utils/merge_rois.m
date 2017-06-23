@@ -1,10 +1,14 @@
 function merge_rois(atlas_file, save_dir, roi_idx, vol_name)
-% Function to merge a set of roi_idx
-% It is possible to specify roi_idx as 'L', 'R', or 'M' in which cases all
-% left sided regions, right sided regions, or midline regions respectively
-% will be merged together; do note that x>0 is right, x=0 is midline, and
-% x<0 is left. This might not correspond to the atlas defaults. Use this
-% parameter with caution
+% Function to merge a set of ROIs
+% roi_idx can take the following values:
+% a vector of numbers corresponding to indices in the atlas_file
+% 'L':      left (x<0)
+% 'R':      right (x>0)
+% 'M':      midline (x=0)
+% 'LM':     left+midline (x<=0)
+% 'RM':     right+midline (x>=0)
+% 'LR':     left+midline (x<0 AND x>0 i.e. x~=0)
+% 'LRM':    the entire brain (left+right+midline)
 % vol_name is the filename with which the output volume is written
 % 
 % Parekh, Pravesh
@@ -57,6 +61,14 @@ else
             all_x = (atlas_xyz(:,1)>0);
         case 'M'
             all_x = (atlas_xyz(:,1)==0);
+        case 'LM'
+            all_x = (atlas_xyz(:,1)<=0);
+        case 'RM'
+            all_x = (atlas_xyz(:,1)>=0);
+        case 'LR'
+            all_x = (atlas_xyz(:,1)~=0);
+        case 'LRM'
+            all_x = ones(length(atlas_xyz(:,1)),1);
     end
     if ~isempty(all_x)
         binary_mask_data = reshape(atlas_data.*all_x, atlas_data_dims);
