@@ -296,7 +296,7 @@ end
 
 %% Handle underscores
 % If underscores were replaced, and user wants them, put them back in
-if underscore_flag == 1 && rep_underscores == 1
+if underscore_flag == 1 && rep_underscores == 0
     new_names_list = strrep(strtrim(new_names_list), ' ', '_');
 end
 
