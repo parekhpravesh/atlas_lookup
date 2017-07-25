@@ -1,13 +1,16 @@
-function create_max_prob_atlas(atlas_name, threshold)
+function create_max_prob_atlas(path_to_atlas, threshold)
 % Function to create a maximum probability atlas from a 4D probabilistic
 % map after thresholding
 %% Inputs:
-% atlas_name:       full path to 4D probability map(s)
+% path_to_atlas:    full path to 4D probability map(s)
 % threshold:        numeric value to threshold with
 % 
 %% Output:
 % A 3D NIfTI file with an intensity value corresponding to a particular
 % region
+% 
+% A warning file if there is a conflict in determining maximum probability
+% at a given voxel (see Notes)
 % 
 %% Notes:
 % At a given voxel, the probability value for all regions are checked. All
@@ -22,52 +25,81 @@ function create_max_prob_atlas(atlas_name, threshold)
 % and thresholding are similar (i.e. they are both fractions or both
 % percentages)
 % 
+% A text file with warnings is created having a warning for every voxel
+% where two regions have the same probability; the first region to have
+% that probability is labeled
+% 
 %% Author(s)
 % Parekh, Pravesh
 % July 08, 2017
 % MBIAL
 
 %% Check and read inputs
-if exist(atlas_name, 'file')
-    [~,name,~] = fileparts(atlas_name);
-    vol_header = spm_vol(atlas_name);
-    if size(vol_header,1) == 1
-        error('Does not appear to be 4D probability map');
-    else
-        [vol_data, vol_xyz] = spm_read_vols(vol_header);
-        vol_xyz = vol_xyz(1:3,:)';
-        num_rois = size(vol_header,1);
-    end
+[atlas_header, atlas_path, atlas_name, atlas_data, atlas_xyz, ~, ~] = ...
+    get_atlas_data(path_to_atlas);
+if size(atlas_header, 1) == 1
+    error('Does not appear to be 4D probability map');
 end
+num_rois = size(atlas_header,1);
 
 %% Thresholding
-max_data_val = max(max(max(max(vol_data))));
+max_data_val = max(max(max(max(atlas_data))));
 
 % Check units
 if max_data_val > 1 && max_data_val <= 100
     if threshold > 1 && threshold <= 100
-        vol_data(vol_data<threshold) = 0;
+        atlas_data(atlas_data<threshold) = 0;
     else
         threshold = threshold * 100;
-        vol_data(vol_data<threshold) = 0;
+        atlas_data(atlas_data<threshold) = 0;
     end
 else
     if threshold > 1 && threshold <= 100
         threshold = threshold/100;
-        vol_data(vol_data<threshold) = 0;
+        atlas_data(atlas_data<threshold) = 0;
     else
-        vol_data(vol_data<threshold) = 0;
+        atlas_data(atlas_data<threshold) = 0;
     end
 end
-vol_data2 = reshape(vol_data, [size(vol_xyz,1), num_rois]);
+atlas_data2 = reshape(atlas_data, [size(atlas_xyz,1), num_rois]);
 
-%% Assign maximum probability
-[val, idx] = max(vol_data2, [], 2);
+%% Calculate and assign maximum probability
+[val, idx] = max(atlas_data2, [], 2);
+warn_count = 0;
+
+% Open a file to write warnings
+fname = fullfile(atlas_path, [atlas_name, '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+fid = fopen(fname, 'w');
+
+% Check if multiple regions have the same probability (equal to max prob)
+for i = 1:length(val)
+    if val(i) ~= 0
+        tmp = sum(atlas_data2(i,:) == val(i));
+        if tmp > 1
+            warn_count = warn_count + 1;
+            warning_msg = ['Regions ', num2str(find(atlas_data2(i,:) == val(i)), '%02d, '),...
+                ' have maximum probability of ', num2str(val(i), '%02d'), ...
+                ' at voxel number ', num2str(i), '; assigning ', ...
+                num2str(idx(i), '%02d'), '; x,y,z : [', ...
+                num2str(atlas_xyz(i,:), '%02d\t '), ']', ];
+            fprintf(fid, '%s\r\n', warning_msg);
+        end
+    end
+end
+fclose(fid);
+
+if warn_count > 0
+    disp(['Total number of regions with conflicting maximum probability = ', num2str(warn_count)]);
+else
+    % Delete file if no warnings
+   delete(fname);
+end
+
 atlas_data_mod = idx.*logical(val);
-atlas_data_mod = reshape(atlas_data_mod, size(squeeze(vol_data(:,:,:,1))));
+atlas_data_mod = reshape(atlas_data_mod, size(squeeze(atlas_data(:,:,:,1))));
 
 %% Modify header and write
-vol_header = vol_header(1);
-vol_header.fname = [name, '_maxprob_thr', num2str(threshold), '.nii'];
+vol_header = atlas_header(1);
+vol_header.fname = fullfile(atlas_path, [atlas_name, '_maxprob_thr', num2str(threshold), '.nii']);
 vol_header.dt = [4,0];
 spm_write_vol(vol_header, atlas_data_mod);
