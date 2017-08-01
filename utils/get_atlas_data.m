@@ -8,7 +8,7 @@ function [atlas_header, atlas_path, atlas_name, atlas_data, atlas_xyz, ...
 %% Outputs:
 % atlas_header:     The header which can be used for writing a new volume
 % atlas_path:       The full path to the atlas
-% atlas_name:       The name of the atlas file
+% atlas_name:       The name of the atlas file (without extension)
 % atlas_data:       The values/intensities at each voxel
 % atlas_xyz:        The xyz coordinates for each voxel
 % all_labels:       The list of unique intensities/labels
@@ -29,9 +29,9 @@ if exist(path_to_atlas, 'file')
     
     % Check if 4D volume
     if size(atlas_header,1) > 1
-        [atlas_path, atlas_name] = fileparts(atlas_header(1).fname);
+        [atlas_path, atlas_name, ~] = fileparts(atlas_header(1).fname);
     else
-        [atlas_path, atlas_name] = fileparts(atlas_header.fname);
+        [atlas_path, atlas_name, ~] = fileparts(atlas_header.fname);
     end
     
     [atlas_data, atlas_xyz] = spm_read_vols(atlas_header);
