@@ -1,11 +1,11 @@
-function create_max_prob_atlas(path_to_atlas, threshold, output_file_name)
+function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc)
 % Function to create a maximum probability atlas from a 4D probabilistic
 % map after thresholding
 %% Inputs:
 % path_to_atlas:    full path to 4D probability map(s)
 % threshold:        numeric value to threshold with (optional)
-% output_file_name: file name (optionally: with full path) which will be
-%                   written (optional)
+% output_file_loc:  full path to where the output file(s) would be written 
+%                   (optional)
 % 
 %% Output:
 % A 3D NIfTI file with an intensity value corresponding to a particular
@@ -33,7 +33,8 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_name)
 % 
 %% Default
 % threshold = 0.25
-% default output file name is atlas_name_maxprob_thr_threshold.nii
+% output file location is the same as path in path_to_atlas
+% output file name: is atlas_name_maxprob_thr_threshold.nii
 % 
 %% Author(s)
 % Parekh, Pravesh
@@ -51,35 +52,34 @@ num_rois = size(atlas_header,1);
 % Setting defaults
 if nargin == 1
     threshold = 0.25;
-    output_file_name =  fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
-                        num2str(threshold), '.nii']);
     warning_file_name = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
-                        num2str(threshold), '_warnings.txt']);
+        num2str(threshold), '_warnings.txt']);
+    output_file_loc   = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
+        num2str(threshold), '.nii']);
 else
     if nargin == 2
         if isempty(threshold)
             threshold = 0.25;
         end
-        output_file_name =  fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
-                            num2str(threshold), '.nii']);
         warning_file_name = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
-                            num2str(threshold), '_warnings.txt']);
+            num2str(threshold), '_warnings.txt']);
+        output_file_loc   = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
+            num2str(threshold), '.nii']);
     else
         if nargin == 3
             if isempty(threshold)
                 threshold = 0.25;
             end
-            if isempty(output_file_name)
-                output_file_name  = fullfile(atlas_path, [atlas_name, ...
-                                    '_maxprob_thr', num2str(threshold), '.nii']);
-                warning_file_name = fullfile(atlas_path, [atlas_name, ...
-                                    '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+            if isempty(output_file_loc)
+                 warning_file_name = fullfile(atlas_path, [atlas_name, ...
+                    '_maxprob_thr', num2str(threshold), '_warnings.txt'])
+                output_file_loc    = fullfile(atlas_path, [atlas_name, ...
+                    '_maxprob_thr', num2str(threshold), '.nii'])
             else
-                [tmp_path, tmp_name, tmp_ext] = fileparts(output_file_name);
-                if isempty(tmp_path)
-                    output_file_name  = fullfile(atlas_path, [tmp_name, tmp_ext]);
-                    warning_file_name = fullfile(atlas_path, [tmp_name, '_warnings.txt']);
-                end
+                warning_file_name = fullfile(output_file_loc, [atlas_name, ...
+                    '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+                output_file_loc   = fullfile(output_file_loc, [atlas_name, ...
+                    '_maxprob_thr', num2str(threshold), '.nii']);
             end
         end
     end
@@ -142,6 +142,6 @@ atlas_data_mod = reshape(atlas_data_mod, size(squeeze(atlas_data(:,:,:,1))));
 
 %% Modify header and write
 vol_header = atlas_header(1);
-vol_header.fname = output_file_name;
+vol_header.fname = output_file_loc;
 vol_header.dt = [4,0];
 spm_write_vol(vol_header, atlas_data_mod);
