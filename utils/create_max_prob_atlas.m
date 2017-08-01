@@ -3,7 +3,7 @@ function create_max_prob_atlas(path_to_atlas, threshold)
 % map after thresholding
 %% Inputs:
 % path_to_atlas:    full path to 4D probability map(s)
-% threshold:        numeric value to threshold with
+% threshold:        numeric value to threshold with (optional)
 % 
 %% Output:
 % A 3D NIfTI file with an intensity value corresponding to a particular
@@ -29,6 +29,9 @@ function create_max_prob_atlas(path_to_atlas, threshold)
 % where two regions have the same probability; the first region to have
 % that probability is labeled
 % 
+%% Default
+% threshold = 0.25
+% 
 %% Author(s)
 % Parekh, Pravesh
 % July 08, 2017
@@ -41,6 +44,11 @@ if size(atlas_header, 1) == 1
     error('Does not appear to be 4D probability map');
 end
 num_rois = size(atlas_header,1);
+
+% Setting default threshold of 0.25
+if nargin == 1
+    threshold = 0.25;
+end
 
 %% Thresholding
 max_data_val = max(max(max(max(atlas_data))));
