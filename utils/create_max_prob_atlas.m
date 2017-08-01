@@ -72,9 +72,9 @@ else
             end
             if isempty(output_file_loc)
                  warning_file_name = fullfile(atlas_path, [atlas_name, ...
-                    '_maxprob_thr', num2str(threshold), '_warnings.txt'])
+                    '_maxprob_thr', num2str(threshold), '_warnings.txt']);
                 output_file_loc    = fullfile(atlas_path, [atlas_name, ...
-                    '_maxprob_thr', num2str(threshold), '.nii'])
+                    '_maxprob_thr', num2str(threshold), '.nii']);
             else
                 warning_file_name = fullfile(output_file_loc, [atlas_name, ...
                     '_maxprob_thr', num2str(threshold), '_warnings.txt']);
