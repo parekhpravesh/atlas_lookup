@@ -134,7 +134,7 @@ if warn_count > 0
     disp(['Total number of voxels with conflicting maximum probability = ', num2str(warn_count)]);
 else
     % Delete file if no warnings
-   delete(fname);
+   delete(warning_file_name);
 end
 
 atlas_data_mod = idx.*logical(val);
