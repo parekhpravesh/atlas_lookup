@@ -1,9 +1,9 @@
-function merge_idx(atlas_file, lookup_file, idx_to_merge, new_idx_list, new_names_list)
+function merge_idx(path_to_atlas, path_to_lookup, idx_to_merge, new_idx_list, new_names_list)
 % Function to merge index values in an atlas; simulataneously modifies the
 % lookup table based on the new_idx value given
 %% Inputs
-% atlas_file:       full path to SPM readable atlas file
-% lookup_file:      full path to text file having lookup entries for the
+% path_to_atlas:    full path to SPM readable atlas file
+% path_to_lookup:   full path to text file having lookup entries for the
 %                   atlas_file provided
 % idx_to_merge:     cell matrix or text file having rows of values to be
 %                   merged; entries in a particular row are merged together
@@ -16,9 +16,9 @@ function merge_idx(atlas_file, lookup_file, idx_to_merge, new_idx_list, new_name
 %                   Example)
 % 
 %% Outputs
-% new atlas and lookup files written in the respective folders where
-% atlas_file and lookup_file are being read from; the files will have
-% "_merged" in their names
+% new atlas and lookup files written in the respective folders pointed by
+% path_to_atlas and path_to_lookup ; the files will have "_merged" in their
+% names
 % 
 %% Notes
 % idx_to_merge should be organized in rows; each row can have several
@@ -88,8 +88,9 @@ function merge_idx(atlas_file, lookup_file, idx_to_merge, new_idx_list, new_name
 
 %% Get atlas and lookup data
 [atlas_header, atlas_path, atlas_name, atlas_data, ~, all_labels, num_labels] ...
-                                                     = get_atlas_data(atlas_file);
-[lookup_path, lookup_name, lookup_idx, lookup_names] = get_lookup_data(lookup_file,1);
+                                      = get_atlas_data(path_to_atlas);
+[lookup_path, lookup_name, lookup_idx, lookup_names] ...
+                                      =  get_lookup_data(path_to_lookup,1);
 
 %% Process inputs
 if ischar(idx_to_merge)
