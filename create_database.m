@@ -1,19 +1,33 @@
 function create_database(atlas_files_path, label_files_path, output_dir)
-% Create database from a list of atlases and lookup tables supplied by the
-% user
+% Create database from a list of atlases and lookup tables
+%% Inputs
+% atlas_files_path:         folder containing various atlas files to be
+%                           included in the database variable
+% label_files_path:         folder containing various label/lookup files
+%                           corresponding to the atlases
+% output_dir:               path where the database variable will be saved
+% 
+%% Outputs
+% database.mat file containing intensity value for all voxels across
+% atlases, the labels corresponding to each unique intensity value, and the
+% names of all the atlases
+% database_all_vars.mat file having additional variables that are created
+% during the running of the program (may have diagnostic value)
+% 
+%% Author(s)
 % Parekh, Pravesh
-% MBIAL
 % May 02, 2017
 % Carried over from April 17, 2017
+% MBIAL
 
-% Initialize
+%% Initialize
 cd(atlas_files_path);
 list_atlases = dir('*.nii');
 all_atlas_names = cell(1, length(list_atlases));
 all_atlas_paths = cell(1, length(list_atlases));
 all_label_paths = cell(1, length(list_atlases));
 
-% Create paths and check if label files exist
+%% Create paths and check if label files exist
 for i = 1:length(list_atlases)
     [~, tmp_name, ~] = fileparts(list_atlases(i).name);
     all_atlas_names{i} = tmp_name;
@@ -25,7 +39,7 @@ for i = 1:length(list_atlases)
 end
 clear tmp_name
 
-% Read first atlas file and get some values
+%% Read first atlas file and get some values
 tmp_vol = spm_vol(all_atlas_paths{1});
 [~, tmp_xyz] = spm_read_vols(tmp_vol);
 vox_check = sqrt(sum(tmp_vol.mat(1:3,1:3).^2));   % Guillaume Flandin
@@ -76,7 +90,7 @@ for atlas = 1:num_atlases
         if isempty(loc)
             label = {'Undefined'};
         else
-            label = deblank(all_labels{2}(loc));
+            label = strtrim(all_labels{2}(loc));
         end
         database_labels{atlas}(uq_count,:) = [list_unique_intensities(uq), label];
         uq_count = uq_count + 1;
