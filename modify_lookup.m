@@ -59,8 +59,7 @@ else
     else
         if nargin == 3
             rep_underscores = 0;
-        end
-           
+        end  
     end
 end
 
