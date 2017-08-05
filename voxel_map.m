@@ -1,9 +1,24 @@
 function voxel_map(db_location, save_dir)
 % Function to create voxel level concordance map
-% Parkh, Pravesh
+%% Inputs:
+% db_location:          location of database file
+% save_dir:             folder where results are to be saved
+% 
+%% Output:
+% voxel_map.mat file containing summary of labels across voxels; for each
+% voxel, following are saved:
+% a) the coordinates in mm, 
+% b) the labels, 
+% c) the number of atlases in which a particular label is reported, 
+% d) the percentage (number of atlases in c divided by total atlases in db,
+% e) a summary of b-d entries
+% 
+%% Author(s)
+% Parekh, Pravesh
 % June 22, 2017
 % MBIAL
 
+%%
 load(db_location);
 num_atlases = abs(size(database_intensity,2)-3);
 num_voxels = size(database_intensity,1);
