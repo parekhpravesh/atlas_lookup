@@ -16,7 +16,7 @@ function merge_rois(path_to_atlas, roi_idx)
 % 'M':                  midline         (x= 0)
 % 'LM':                 left+midline    (x<=0)
 % 'RM':                 right+midline   (x>=0)
-% 'LR':                 left+midline    (x<0 AND x>0 i.e. x~=0)
+% 'LR':                 left+right      (x<0 AND x>0 i.e. x~=0)
 % 'LRM':                the entire brain (left+right+midline)
 % 
 %% Author(s)
