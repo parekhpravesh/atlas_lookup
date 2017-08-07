@@ -13,7 +13,7 @@ function msg = check_atlas_midline(path_to_atlas)
 
 %%
 % Read atlas file
-[~, ~, ~, atlas_data, atlas_xyz, ~, ~] = get_atlas_data(path_to_atlas);
+[~, ~, atlas_name, atlas_data, atlas_xyz, ~, ~] = get_atlas_data(path_to_atlas);
 all_atlas_data = [atlas_xyz, atlas_data(:)];
  
 % Get atlas data for midline
@@ -30,13 +30,13 @@ uniques_left = unique(nonzeros(atlas_data_left));
 
 % Check how midline is defined
 if ~isempty(intersect(uniques_midline, uniques_left)) && ~isempty(intersect(uniques_midline, uniques_right))
-    msg = [name, ': Midline has both left and right definition'];
+    msg = [atlas_name, ': Midline has both left and right definition'];
 else
     if isempty(intersect(uniques_midline, uniques_left))
-        msg = [name, ': Midline is classified with right'];
+        msg = [atlas_name, ': Midline is classified with right'];
     else
         if isempty(intersect(uniques_midline, uniques_right))
-            msg = [name, ': Midline is classified with left'];
+            msg = [atlas_name, ': Midline is classified with left'];
         end
     end
 end
