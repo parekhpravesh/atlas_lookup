@@ -1,10 +1,10 @@
-function msg = check_atlas_midline(atlas_name)
+function msg = check_atlas_midline(path_to_atlas)
 % Function to check if the atlas midline is defined with left or right
 %% Input:
-% atlas_name:       Full path to SPM readable atlas file
+% path_to_atlas:    Full path to SPM readable atlas file
 %
 %% Output:
-% check_msg:        Message stating how midline is defined
+% msg:              Message stating how midline is defined
 %
 %% Author(s)
 % Parekh, Pravesh
@@ -12,16 +12,10 @@ function msg = check_atlas_midline(atlas_name)
 % MBIAL
 
 %%
-% Read atlas and get xyz coordinates
-if exist(atlas_name, 'file')
-    [~,name,~] = fileparts(atlas_name);
-    [atlas_data, atlas_xyz] = spm_read_vols(spm_vol(atlas_name));
-    atlas_xyz = (atlas_xyz(1:3,:))';
-    all_atlas_data = [atlas_xyz, atlas_data(:)];
-else
-    error('File not found');
-end
-
+% Read atlas file
+[~, ~, ~, atlas_data, atlas_xyz, ~, ~] = get_atlas_data(path_to_atlas);
+all_atlas_data = [atlas_xyz, atlas_data(:)];
+ 
 % Get atlas data for midline
 atlas_data_midline = all_atlas_data(all_atlas_data(:,1)==0, 4);
 uniques_midline = unique(nonzeros(atlas_data_midline));
