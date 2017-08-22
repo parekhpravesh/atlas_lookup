@@ -1,4 +1,4 @@
-function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc)
+function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc, xml_file)
 % Function to create a maximum probability atlas from a 4D probabilistic
 % map after thresholding
 %% Inputs:
@@ -6,10 +6,14 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc)
 % threshold:        numeric value to threshold with (optional)
 % output_file_loc:  full path to where the output file(s) would be written 
 %                   (optional)
+% xml_file:         full path to xml file from which lookup file will be
+%                   created (optional; see Notes)
 % 
 %% Output:
 % A 3D NIfTI file with an intensity value corresponding to a particular
 % region
+% 
+% A .txt file if the xml file having indices and labels are provided
 % 
 % A warning file if there is a conflict in determining maximum probability
 % at a given voxel (see Notes)
@@ -31,10 +35,19 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc)
 % where two regions have the same probability; the first region to have
 % that probability is labeled
 % 
+% The xml file input is valid when trying to import FSL atlas files; this
+% module is not well tested so may not work in case of other kinds of xml
+% files. If xml file is provided, lookup file is created as well. The
+% created lookup file will have 0 and 'Undefined' as the first entry
+% 
+% The index value read from xml file is +1ed as the starting value is from
+% zero
+% 
 %% Default
 % threshold = 0.25
 % output file location is the same as path in path_to_atlas
 % output file name: is atlas_name_maxprob_thr_threshold.nii
+% lookup file name: is atlas_name_maxprob_thr_threshold.txt
 % 
 %% Author(s)
 % Parekh, Pravesh
@@ -56,6 +69,7 @@ if nargin == 1
         num2str(threshold), '_warnings.txt']);
     output_file_loc   = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
         num2str(threshold), '.nii']);
+    xml_file = '';
 else
     if nargin == 2
         if isempty(threshold)
@@ -65,6 +79,7 @@ else
             num2str(threshold), '_warnings.txt']);
         output_file_loc   = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
             num2str(threshold), '.nii']);
+        xml_file = '';
     else
         if nargin == 3
             if isempty(threshold)
@@ -80,6 +95,28 @@ else
                     '_maxprob_thr', num2str(threshold), '_warnings.txt']);
                 output_file_loc   = fullfile(output_file_loc, [atlas_name, ...
                     '_maxprob_thr', num2str(threshold), '.nii']);
+            end
+            xml_file = '';
+        else
+            if nargin == 4
+                if isempty(threshold)
+                    threshold = 0.25;
+                end
+                if isempty(output_file_loc)
+                    warning_file_name = fullfile(atlas_path, [atlas_name, ...
+                        '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+                    output_file_loc   = fullfile(atlas_path, [atlas_name, ...
+                        '_maxprob_thr', num2str(threshold), '.nii']);
+                    xml_file_name     = fullfile(atlas_path, [atlas_name, ...
+                        '_maxprob_thr', num2str(threshold), '.txt']);
+                else
+                    warning_file_name = fullfile(output_file_loc, [atlas_name, ...
+                        '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+                    xml_file_name     = fullfile(output_file_loc, [atlas_name, ...
+                        '_maxprob_thr', num2str(threshold), '.txt']);
+                    output_file_loc   = fullfile(output_file_loc, [atlas_name, ...
+                        '_maxprob_thr', num2str(threshold), '.nii']);
+                end
             end
         end
     end
@@ -139,6 +176,44 @@ end
 
 atlas_data_mod = idx.*logical(val);
 atlas_data_mod = reshape(atlas_data_mod, size(squeeze(atlas_data(:,:,:,1))));
+
+%% Creating lookup table and writing lookup file if xml file was provided
+if ~isempty(xml_file)
+    % Read xml file
+    xmlDoc = xmlread(xml_file);
+    
+    % Get all list items corresponding to tag label
+    allListItems = xmlDoc.getElementsByTagName('label');
+    
+    % Find number of all such list items
+    numListItems = allListItems.getLength;
+    
+    % Initialize
+    data = cell(numListItems, 2);
+    
+    % Loop over all entries
+    for element_num = 0:numListItems-1
+        % Get 'index' attribute; adding +1 to index value
+        data{element_num+1,1} = str2double(allListItems.item(element_num).getAttribute('index'))+1;
+        % Get 'label'
+        data{element_num+1,2} = char(allListItems.item(element_num).getTextContent);
+    end
+    
+    % Append 'Undefined' entry at the top
+    data = [0, {'Undefined'}; data];
+    
+    % Open lookup table text file for writing
+    fid = fopen(xml_file_name, 'w');
+    
+    for i = 1:size(data,1)
+        if i == size(data,1)
+            fprintf(fid, '%d\t%s', data{i,1}, data{i,2});
+        else
+            fprintf(fid, '%d\t%s\r\n', data{i,1}, data{i,2});
+        end
+    end
+    fclose(fid);
+end
 
 %% Modify header and write
 vol_header = atlas_header(1);
