@@ -2,7 +2,8 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc, xml_fi
 % Function to create a maximum probability atlas from a 4D probabilistic
 % map after thresholding
 %% Inputs:
-% path_to_atlas:    full path to 4D probability map(s)
+% path_to_atlas:    full path to 4D probability map(s) or full path to a
+%                   folder having 3D probability maps, one file for each ROI
 % threshold:        numeric value to threshold with (optional)
 % output_file_loc:  full path to where the output file(s) would be written 
 %                   (optional)
@@ -43,11 +44,17 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc, xml_fi
 % The index value read from xml file is +1ed as the starting value is from
 % zero
 % 
+% In case folder is provided instead of 4D files, image file properties
+% (such as affine transform matrix) are read from the first ROI
+% 
 %% Default
 % threshold = 0.25
 % output file location is the same as path in path_to_atlas
 % output file name: is atlas_name_maxprob_thr_threshold.nii
 % lookup file name: is atlas_name_maxprob_thr_threshold.txt
+% 
+% In case folder is provided instead of 4D file, the name of the folder is
+% assumed to be the atlas_name
 % 
 %% Author(s)
 % Parekh, Pravesh
@@ -55,14 +62,50 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc, xml_fi
 % MBIAL
 
 %% Check and read inputs
-[atlas_header, atlas_path, atlas_name, atlas_data, atlas_xyz, ~, ~] = ...
-    get_atlas_data(path_to_atlas);
-if size(atlas_header, 1) == 1
-    error('Does not appear to be 4D probability map');
+% Check if input is folder or NIfTI file
+if isdir(path_to_atlas)
+    cd(path_to_atlas);
+    list_files = dir('*.nii');
+   
+    % Check to make sure that there are some image files present
+    if isempty(list_files)
+        % Make an attempt to see if .img files are present
+        list_files = dir('*.img');
+        if isempty(list_files)
+            error('Could not find image files');
+        end
+    end
+        num_rois = length(list_files);
+        
+        % Read first file and get information
+        atlas_header = spm_vol(list_files(1).name);
+        [atlas_path, ~, ~] = fileparts(atlas_header(1).fname);
+        [tmp_data, atlas_xyz] = spm_read_vols(atlas_header);
+        atlas_xyz = atlas_xyz(1:3,:)';
+        
+        % Initialize
+        atlas_data = zeros([size(tmp_data), num_rois]);
+        
+        % atlas_name is the name of the folder
+        [~, atlas_name, ~] = fileparts(path_to_atlas);
+        
+        % Read each file and assign to atlas_data 
+        for i = 1:num_rois
+            tmp_vol             = spm_vol(list_files(i).name);
+            atlas_data(:,:,:,i) = spm_read_vols(tmp_vol);
+        end
+        clear tmp_data tmp_vol
+else
+    
+    [atlas_header, atlas_path, atlas_name, atlas_data, atlas_xyz, ~, ~] = ...
+        get_atlas_data(path_to_atlas);
+    if size(atlas_header, 1) == 1
+        error('Does not appear to be 4D probability map');
+    end
+    num_rois = size(atlas_header,1);
 end
-num_rois = size(atlas_header,1);
 
-% Setting defaults
+%% Setting defaults
 if nargin == 1
     threshold = 0.25;
     warning_file_name = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
