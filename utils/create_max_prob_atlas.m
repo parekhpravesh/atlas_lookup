@@ -19,6 +19,12 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc, xml_fi
 % A warning file if there is a conflict in determining maximum probability
 % at a given voxel (see Notes)
 %
+% A stats file if there is a conflict, mentioning the number of voxels in
+% conflict, the number of voxels whhose conflict were resolved by
+% neighbourhood searching, the number of voxels whose conflict were
+% resolved by random allotment, and the number of voxels which were
+% eliminated (see Notes)
+% 
 %% Notes:
 % At a given voxel, the probability value for all regions are checked. All
 % probability values below threshold are discarded. Then, all indices with
@@ -129,6 +135,8 @@ if nargin == 1
     threshold = 0.25;
     warning_file_name = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
         num2str(threshold), '_warnings.txt']);
+    stats_file_name   = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
+        num2str(threshold), '_stats.txt']);
     output_file_loc   = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
         num2str(threshold), '.nii']);
     xml_file = '';
@@ -139,6 +147,8 @@ else
         end
         warning_file_name = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
             num2str(threshold), '_warnings.txt']);
+        stats_file_name   = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
+            num2str(threshold), '_stats.txt']);
         output_file_loc   = fullfile(atlas_path, [atlas_name, '_maxprob_thr', ...
             num2str(threshold), '.nii']);
         xml_file = '';
@@ -150,11 +160,15 @@ else
             if isempty(output_file_loc)
                 warning_file_name = fullfile(atlas_path, [atlas_name, ...
                     '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+                stats_file_name   = fullfile(atlas_path, [atlas_name, ...
+                    '_maxprob_thr', num2str(threshold), '_stats.txt']);
                 output_file_loc    = fullfile(atlas_path, [atlas_name, ...
                     '_maxprob_thr', num2str(threshold), '.nii']);
             else
                 warning_file_name = fullfile(output_file_loc, [atlas_name, ...
                     '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+                stats_file_name   = fullfile(output_file_loc, [atlas_name, ...
+                    '_maxprob_thr', num2str(threshold), '_stats.txt']);
                 output_file_loc   = fullfile(output_file_loc, [atlas_name, ...
                     '_maxprob_thr', num2str(threshold), '.nii']);
             end
@@ -167,6 +181,8 @@ else
                 if isempty(output_file_loc)
                     warning_file_name = fullfile(atlas_path, [atlas_name, ...
                         '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+                    stats_file_name   = fullfile(atlas_path, [atlas_name, ...
+                        '_maxprob_thr', num2str(threshold), '_stats.txt']);
                     output_file_loc   = fullfile(atlas_path, [atlas_name, ...
                         '_maxprob_thr', num2str(threshold), '.nii']);
                     xml_file_name     = fullfile(atlas_path, [atlas_name, ...
@@ -174,6 +190,8 @@ else
                 else
                     warning_file_name = fullfile(output_file_loc, [atlas_name, ...
                         '_maxprob_thr', num2str(threshold), '_warnings.txt']);
+                    stats_file_name   = fullfile(output_file_loc, [atlas_name, ...
+                        '_maxprob_thr', num2str(threshold), '_stats.txt']);
                     xml_file_name     = fullfile(output_file_loc, [atlas_name, ...
                         '_maxprob_thr', num2str(threshold), '.txt']);
                     output_file_loc   = fullfile(output_file_loc, [atlas_name, ...
@@ -208,6 +226,9 @@ atlas_data2 = reshape(atlas_data, [size(atlas_xyz,1), num_rois]);
 %% Calculate and assign maximum probability
 [val, idx] = max(atlas_data2, [], 2);
 warn_count = 0;
+rand_count = 0;
+high_count = 0;
+elim_count = 0;
 
 % Open a file to write warnings
 fid = fopen(warning_file_name, 'w');
@@ -284,6 +305,7 @@ for i = 1:length(val)
                     num2str(idx(i), '%02d'), ...
                     ' as no neighbouring voxels of conflicted regions found;', ...
                     ' x,y,z : [', num2str(atlas_xyz(i,:), '%02d '), ']', ];
+                elim_count = elim_count + 1;
                 
             else 
                 % Find number of voxels belonging to regions having a
@@ -300,6 +322,7 @@ for i = 1:length(val)
                         ' by highest number of neighbouring voxels: ', ...
                         num2str(tmp_val), ...
                         '; x,y,z : [', num2str(atlas_xyz(i,:), '%02d '), ']', ];
+                    high_count = high_count + 1;
                     
                 else
                     % Conflict not resolved; random allocation; report and
@@ -310,6 +333,7 @@ for i = 1:length(val)
                         ' at voxel number ', num2str(i), '; assigning ', ...
                         num2str(idx(i), '%02d'), ' by random allotment;', ...
                         ' x,y,z : [', num2str(atlas_xyz(i,:), '%02d '), ']', ];
+                    rand_count = rand_count + 1;
                 end
             end
             fprintf(fid, '%s\r\n', warning_msg);
@@ -323,7 +347,21 @@ end
 fclose(fid);
 
 if warn_count > 0
-    disp(['Total number of voxels with conflicting maximum probability = ', num2str(warn_count)]);
+    msg = ['Total number of voxels with conflicting maximum probability = ', ...
+        num2str(warn_count)];
+    disp(msg);
+    % Open the stats file and write details
+    fid = fopen(stats_file_name, 'w');
+    fprintf(fid, '%s\r\n', msg);
+    fprintf(fid, '%s\r\n', ...
+        ['No. of conflicts resolved by neighbourhood searching = ', ...
+        num2str(high_count)]);
+    fprintf(fid, '%s\r\n', ...
+        ['No. of conflicts resolved by random allotment = ', ...
+        num2str(rand_count)]);
+    fprintf(fid, '%s', ...
+        ['No. of voxels eliminated = ', num2str(elim_count)]);
+    fclose(fid);
 else
     % Delete file if no warnings
     delete(warning_file_name);
