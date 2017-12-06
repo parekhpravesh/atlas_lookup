@@ -24,7 +24,7 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc, xml_fi
 % neighbourhood searching, the number of voxels whose conflict were
 % resolved by random allotment, and the number of voxels which were
 % eliminated (see Notes)
-% 
+%
 %% Notes:
 % At a given voxel, the probability value for all regions are checked. All
 % probability values below threshold are discarded. Then, all indices with
@@ -48,9 +48,11 @@ function create_max_prob_atlas(path_to_atlas, threshold, output_file_loc, xml_fi
 % eliminated (i.e. set as undefined). If the neighbourhood has a higher
 % number of voxels belonging to one of these regions, that particular
 % region is assigned to the voxel. If the conflict cannot be resolved by
-% this method, then the voxel is randomly assigned to any of the regions in
-% conflict. It is importantt to note that when searching the neighbourhood,
-% only thresholded values are being looked for.
+% this method, then the neighbourhood is expanded to a 5x5x5 voxels (124
+% neighbours); if the conflict cannot be resolved in this neighbourhood,
+% the voxel is randomly assigned to any of the regions in conflict. It is
+% importantt to note that when searching the neighbourhood, only
+% thresholded values are being looked for.
 %
 % The xml file input is valid when trying to import FSL atlas files; this
 % module is not well tested so may not work in case of other kinds of xml
@@ -224,24 +226,25 @@ end
 atlas_data2 = reshape(atlas_data, [size(atlas_xyz,1), num_rois]);
 
 %% Calculate and assign maximum probability
-[val, idx] = max(atlas_data2, [], 2);
+[prob_val, roi_idx] = max(atlas_data2, [], 2);
 warn_count = 0;
 rand_count = 0;
 high_count = 0;
 elim_count = 0;
+five_count = 0;
 
 % Open a file to write warnings
 fid = fopen(warning_file_name, 'w');
 
 % Check if multiple regions have the same probability (equal to max prob)
-for i = 1:length(val)
-    if val(i) ~= 0
-        tmp = sum(atlas_data2(i,:) == val(i));
+for i = 1:length(prob_val)
+    if prob_val(i) ~= 0
+        tmp = sum(atlas_data2(i,:) == prob_val(i));
         if tmp > 1
             
             % Conflict found
             warn_count = warn_count + 1;
-            which_regions = find(atlas_data2(i,:) == val(i));
+            which_regions = find(atlas_data2(i,:) == prob_val(i));
             
             % Attempting to resolve conflict by checking in a neighbourhood
             % of 3x3x3 voxels; if there is a majority of voxels of one
@@ -268,28 +271,34 @@ for i = 1:length(val)
                 repmat_xyz(:,2), repmat_xyz(:,3));
             
             % Get maximum probabilities in this neighbourhood
-            [nei_val, nei_ind] = max(atlas_data2(repmat_ind, :), [], 2);
+            [nei_prob_val, nei_roi_ind] = max(atlas_data2(repmat_ind, :), [], 2);
             
             % Remove neighbouring voxels having zero probability and/or
-            % probability conflict
+            % probability conflict and/or regions which are not in conflict
             nei_to_remove = [];
             counter = 1;
-            for j = 1:length(nei_val)
-                if nei_val(j)~=0
-                    tmp2 = sum(atlas_data2(repmat_ind(j),:) == nei_val(j));
+            for j = 1:length(nei_prob_val)
+                if nei_prob_val(j)~=0
+                    tmp2 = sum(atlas_data2(repmat_ind(j),:) == nei_prob_val(j));
                     if tmp2 > 1
                         nei_to_remove(counter) = j;
                         counter = counter + 1;
+                    else
+                        if ~ismember(nei_roi_ind(j), which_regions)
+                            nei_to_remove(counter) = j;
+                            counter = counter + 1;
+                        end
                     end
                 else
                     nei_to_remove(counter) = j;
                     counter = counter + 1;
                 end
             end
-            nei_ind(nei_to_remove) = [];
+            nei_to_remove = nei_to_remove';
+            nei_roi_ind(nei_to_remove) = [];
             
             % Count number of voxels belonging to all regions
-            count_tab = tabulate_vector(nei_ind);
+            count_tab = tabulate_vector(nei_roi_ind);
             count_tab = count_tab(1:end, 1:end-1);
             
             % Check if there is at least one voxel in the neighbourhood
@@ -297,43 +306,119 @@ for i = 1:length(val)
             % not, then do not assign any region to this voxel
             if sum(ismember(count_tab(:,1), which_regions'))==0
                 % No region assignment to this voxel
-                idx(i) = 0;
+                roi_idx(i) = 0;
                 % Report
                 warning_msg = ['Regions ', num2str(which_regions, '%02d, '),...
-                    ' have maximum probability of ', num2str(val(i), '%02d'), ...
+                    ' have maximum probability of ', num2str(prob_val(i), '%02d'), ...
                     ' at voxel number ', num2str(i), '; assigning ', ...
-                    num2str(idx(i), '%02d'), ...
+                    num2str(roi_idx(i), '%02d'), ...
                     ' as no neighbouring voxels of conflicted regions found;', ...
                     ' x,y,z : [', num2str(atlas_xyz(i,:), '%02d '), ']', ];
                 elim_count = elim_count + 1;
                 
-            else 
+            else
                 % Find number of voxels belonging to regions having a
                 % conflicted probability (which_regions from above)
-                [tmp_val, tmp_loc] = max(count_tab(ismember(count_tab(:,1), which_regions'),2));
+                [tmp_val, tmp_loc] = ...
+                    max(count_tab(ismember(count_tab(:,1), which_regions'),2));
                 if numel(find(count_tab(:,2) == tmp_val)) == 1
                     
                     % Conflict resolved; report and update
-                    idx(i) = count_tab(tmp_loc,1);
+                    roi_idx(i) = count_tab(tmp_loc,1);
                     warning_msg = ['Regions ', num2str(which_regions, '%02d, '),...
-                        ' have maximum probability of ', num2str(val(i), '%02d'), ...
+                        ' have maximum probability of ', num2str(prob_val(i), '%02d'), ...
                         ' at voxel number ', num2str(i), '; assigning ', ...
-                        num2str(idx(i), '%02d'), ...
+                        num2str(roi_idx(i), '%02d'), ...
                         ' by highest number of neighbouring voxels: ', ...
                         num2str(tmp_val), ...
                         '; x,y,z : [', num2str(atlas_xyz(i,:), '%02d '), ']', ];
                     high_count = high_count + 1;
                     
                 else
-                    % Conflict not resolved; random allocation; report and
-                    % update
-                    idx(i) = count_tab(randi(length(count_tab)),1);
-                    warning_msg = ['Regions ', num2str(which_regions, '%02d, '),...
-                        ' have maximum probability of ', num2str(val(i), '%02d'), ...
-                        ' at voxel number ', num2str(i), '; assigning ', ...
-                        num2str(idx(i), '%02d'), ' by random allotment;', ...
-                        ' x,y,z : [', num2str(atlas_xyz(i,:), '%02d '), ']', ];
-                    rand_count = rand_count + 1;
+                    % Conflict not resolved
+                    % Attempt looking in a neighbourhood of 5x5x5
+                    % Clear some variables
+                    clear repmat_x repmat_y repmat_z repmat_xyz nei_val ...
+                        nei_idx tmp2 count_tab
+                    
+                    % Create all 124 neighbours
+                    repmat_x    = repmat((loc_ijk(1)-2:loc_ijk(1)+2)',25,1);
+                    repmat_y    = repmat((loc_ijk(2)-2:loc_ijk(2)+2) ,5, 5);
+                    repmat_z    = repmat((loc_ijk(3)-2:loc_ijk(3)+2) ,25,1);
+                    repmat_xyz  = [repmat_x(:), repmat_y(:), repmat_z(:)];
+                    repmat_xyz(ismember(repmat_xyz, loc_ijk(1:3), 'rows'),:)= [];
+                    
+                    % Remove any neighbours that are outside the matrix
+                    repmat_xyz(repmat_xyz(:,1)>max_i, :) = [];
+                    repmat_xyz(repmat_xyz(:,2)>max_j, :) = [];
+                    repmat_xyz(repmat_xyz(:,3)>max_k, :) = [];
+                    repmat_xyz(repmat_xyz(:,1)<1, :) = [];
+                    repmat_xyz(repmat_xyz(:,2)<1, :) = [];
+                    repmat_xyz(repmat_xyz(:,3)<1, :) = [];
+                    
+                    % Convert all the subscripts to indices
+                    repmat_ind = sub2ind([max_i max_j max_k],repmat_xyz(:,1), ...
+                        repmat_xyz(:,2), repmat_xyz(:,3));
+                    
+                    % Get maximum probabilities in this neighbourhood
+                    [nei_prob_val, nei_roi_ind] = max(atlas_data2(repmat_ind, :), [], 2);
+                    
+                    % Remove neighbouring voxels having zero probability
+                    % and/or probability conflict and/or regions which are
+                    % not in conflict
+                    nei_to_remove = [];
+                    counter = 1;
+                    for j = 1:length(nei_prob_val)
+                        if nei_prob_val(j)~=0
+                            tmp2 = sum(atlas_data2(repmat_ind(j),:) == nei_prob_val(j));
+                            if tmp2 > 1
+                                nei_to_remove(counter) = j;
+                                counter = counter + 1;
+                            else
+                                if ~ismember(nei_roi_ind(j), which_regions)
+                                    nei_to_remove(counter) = j;
+                                    counter = counter + 1;
+                                end
+                            end
+                        else
+                            nei_to_remove(counter) = j;
+                            counter = counter + 1;
+                        end
+                    end
+                    nei_roi_ind(nei_to_remove) = [];
+                    
+                    % Count number of voxels belonging to all regions
+                    count_tab = tabulate_vector(nei_roi_ind);
+                    count_tab = count_tab(1:end, 1:end-1);
+                    
+                    % Find number of voxels belonging to regions having a
+                    % conflicted probability (which_regions from above)
+                    [tmp_val, tmp_loc] = ...
+                        max(count_tab(ismember(count_tab(:,1), which_regions'),2));
+                    if numel(find(count_tab(:,2) == tmp_val)) == 1
+                        
+                        % Conflict resolved; report and update
+                        roi_idx(i) = count_tab(tmp_loc,1);
+                        warning_msg = ['Regions ', num2str(which_regions, '%02d, '),...
+                            ' have maximum probability of ', num2str(prob_val(i), '%02d'), ...
+                            ' at voxel number ', num2str(i), '; assigning ', ...
+                            num2str(roi_idx(i), '%02d'), ...
+                            ' by highest number of neighbouring voxels (5x5x5): ', ...
+                            num2str(tmp_val), ...
+                            '; x,y,z : [', num2str(atlas_xyz(i,:), '%02d '), ']', ];
+                        five_count = five_count + 1;
+                        
+                    else
+                        
+                        % Random allotment
+                        roi_idx(i) = count_tab(randi(length(count_tab)),1);
+                        warning_msg = ['Regions ', num2str(which_regions, '%02d, '),...
+                            ' have maximum probability of ', num2str(prob_val(i), '%02d'), ...
+                            ' at voxel number ', num2str(i), '; assigning ', ...
+                            num2str(roi_idx(i), '%02d'), ' by random allotment;', ...
+                            ' x,y,z : [', num2str(atlas_xyz(i,:), '%02d '), ']', ];
+                        rand_count = rand_count + 1;
+                    end
                 end
             end
             fprintf(fid, '%s\r\n', warning_msg);
@@ -357,6 +442,9 @@ if warn_count > 0
         ['No. of conflicts resolved by neighbourhood searching = ', ...
         num2str(high_count)]);
     fprintf(fid, '%s\r\n', ...
+        ['No. of conflicts resolved by 5x5x5 neighbourhood searching = ', ...
+        num2str(five_count)]);
+    fprintf(fid, '%s\r\n', ...
         ['No. of conflicts resolved by random allotment = ', ...
         num2str(rand_count)]);
     fprintf(fid, '%s', ...
@@ -367,7 +455,7 @@ else
     delete(warning_file_name);
 end
 
-atlas_data_mod = idx.*logical(val);
+atlas_data_mod = roi_idx.*logical(prob_val);
 atlas_data_mod = reshape(atlas_data_mod, size(squeeze(atlas_data(:,:,:,1))));
 
 %% Creating lookup table and writing lookup file if xml file was provided
